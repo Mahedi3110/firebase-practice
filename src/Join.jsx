@@ -6,20 +6,23 @@ import { AuthContext } from './provider/AuthProvider';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const Join = () => {
-    const { joinByFacebook, joinByGithub, joinByGoogle, logIn, createUser, mailVerification, resetPassword } = useContext(AuthContext)
+    const { joinByFacebook, joinByGithub, joinByGoogle, logIn, createUser, mailVerification, resetPassword, setLoading } = useContext(AuthContext)
 
     const passError = () => toast("Confirm password dosen't match.");
+    const exist = () => toast("This email address is already exist.");
     const strongPass = () => toast("Please input a strong password.");
     const wrongPass = () => toast("Wrong password. Please try again.");
+    const plsVerify = () => toast(<p className='text-center'>Your email is not verified. Please verify your email address first.</p>);
 
     const navigate = useNavigate()
     const location = useLocation()
-    const from = location.state?.from?.pathname || '/'
+    const from = location.state?.from?.pathname || '/home';
 
     const [showPass1, setShowPass1] = useState(false)
     const [showPass2, setShowPass2] = useState(false)
     const [showPass3, setShowPass3] = useState(false)
     const [clicked, setClicked] = useState(false)
+    const [clicked2, setClicked2] = useState(true)
     const [border1, setBorder1] = useState(true)
     const [border2, setBorder2] = useState(true)
     const [border3, setBorder3] = useState(true)
@@ -41,6 +44,7 @@ const Join = () => {
         joinByGoogle()
             .then(result => {
                 console.log(result.user);
+                navigate(from, { replace: true })
             })
             .catch(error => {
                 console.log(error.message);
@@ -50,6 +54,7 @@ const Join = () => {
         joinByGithub()
             .then(result => {
                 console.log(result.user)
+                navigate(from, { replace: true })
             })
             .catch(error => {
                 console.log(error.message);
@@ -59,14 +64,17 @@ const Join = () => {
         joinByFacebook()
             .then(result => {
                 console.log(result.user)
+                navigate(from, { replace: true })
             })
             .catch(error => {
                 console.log(error.message);
             })
     }
     const handleSignUp = (event) => {
+        setClicked2(true)
         event.preventDefault()
         const email = event.target.email.value;
+        const photo = event.target.image.value;
         const password = event.target.password.value;
         const confirmPassword = event.target.confirmPassword.value;
         const fullName = event.target.firstName.value + ' ' + event.target.lastName.value;
@@ -77,26 +85,34 @@ const Join = () => {
         }
         createUser(email, password)
             .then(result => {
+                const logInUser = result.user
                 // if (logInUser) {
-                updateProfile(result.user, { displayName: fullName })
+                updateProfile(logInUser, { displayName: fullName, photoURL: photo })
                     .then(() => {
                         console.log('user name updated');
-                        navigate(from, { replace: true })
+                        if (!logInUser.emailVerified) {
+                            mailVerification(logInUser)
+                                .then(result => {
+                                    // verify()
+                                    setLoading(false)
+                                    setClicked2(false)
+                                })
+                        }
+                        else {
+                            setLoading(false)
+                            navigate(from, { replace: true })
+                        }
                     })
                     .catch(error => {
+                        exist()
+                        setLoading(false)
                         console.log(error.message);
                     })
                 // }
-                if (!logInUser.emailVerified) {
-                    mailVerification(logInUser)
-                        .then(result => {
-                            console.log(result.user);
-                        })
-                }
-                console.log(logInUser);
-                event.target.reset()
             })
             .catch(error => {
+                exist()
+                setLoading(false)
                 console.log(error.message);
             })
         setBorder2(true)
@@ -108,7 +124,15 @@ const Join = () => {
         logIn(email, password)
             .then(result => {
                 console.log(result.user)
-                navigate(from, { replace: true })
+                const logInUser = result.user;
+                if (logInUser.emailVerified) {
+                    setLoading(false)
+                    navigate(from, { replace: true })
+                }
+                else {
+                    plsVerify()
+                    setLoading(false)
+                }
             })
             .catch(error => {
                 console.log(error.message);
@@ -126,7 +150,11 @@ const Join = () => {
             .catch(error => {
                 console.log(error.message);
             })
-        setClicked(!clicked)
+        setClicked(true)
+    }
+
+    const okay = () => {
+        setClicked2(true)
     }
     return (
         <div className='mt-28'>
@@ -157,7 +185,7 @@ const Join = () => {
                                 </div>
                                 <div className="form-control mt-6 flex flex-col items-center">
                                     <button type='submit' className="btn w-full">Login</button>
-                                    <p className='ml-2'>Don't have an account? <label htmlFor="my-modal-3" className="btn modal-button normal-case btn-link">Register here.</label></p>
+                                    <p className='ml-2'>Don't have an account? <label htmlFor="my-modal-3" onClick={okay} className="btn modal-button normal-case btn-link">Register here.</label></p>
                                 </div>
                             </form>
                             <div className='mt-0 flex flex-col items-center'>
@@ -179,83 +207,91 @@ const Join = () => {
 
             <input type="checkbox" id="my-modal-3" className="modal-toggle" />
             <div className="modal">
-                <div className="modal-box relative max-w-4xl">
+                <div className={clicked2 ? "modal-box relative max-w-4xl" : "modal-box relative max-w-md"}>
                     <label htmlFor="my-modal-3" className="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
-                    <div className="hero bg-base-200 w-full">
-                        <div className="flex-col lg:flex-row-reverse w-full px-5">
-                            <div className="flex-shrink-0 w-full">
-                                <form onSubmit={handleSignUp}>
-                                    <div className='md:grid-cols-2 grid-cols-1 grid'>
-                                        <div className='mr-3'>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">First Name</span>
-                                                </label>
-                                                <input type="text" placeholder="first name" name='firstName' className="input input-bordered" required />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Last Name</span>
-                                                </label>
-                                                <input type="text" placeholder="last name" name='lastName' className="input input-bordered" required />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Image</span>
-                                                </label>
-                                                <input type="img" placeholder="image url" name='image' className="input input-bordered pt-2 pl-2" required />
-                                            </div>
-                                        </div>
-                                        <div className='ml-3'>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Email</span>
-                                                </label>
-                                                <input type="email" placeholder="email" name='email' className="input input-bordered" required />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Password</span>
-                                                </label>
-                                                <div className='relative'>
-                                                    <input onBlur={passBlur1} type={showPass2 ? 'text' : 'password'} placeholder="password" name='password' className={border1 ? "input input-bordered w-full border-gray-300" : "input input-bordered w-full border-red-700"} required />
-                                                    <div className='absolute top-3 right-3'>
-                                                        {
-                                                            showPass2 ? <i onClick={() => setShowPass2(!showPass2)} className="fa-regular fa-eye cursor-pointer"></i> : <i onClick={() => setShowPass2(!showPass2)} className="fa-regular fa-eye-slash cursor-pointer"></i>
-                                                        }
+                    {
+                        clicked2 ?
+                            <div className="hero bg-base-200 w-full">
+                                <div className="flex-col lg:flex-row-reverse w-full px-5">
+                                    <div className="flex-shrink-0 w-full">
+                                        <form onSubmit={handleSignUp}>
+                                            <div className='md:grid-cols-2 grid-cols-1 grid'>
+                                                <div className='mr-3'>
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">First Name</span>
+                                                        </label>
+                                                        <input type="text" placeholder="first name" name='firstName' className="input input-bordered" required />
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Last Name</span>
+                                                        </label>
+                                                        <input type="text" placeholder="last name" name='lastName' className="input input-bordered" required />
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Image</span>
+                                                        </label>
+                                                        <input type="img" placeholder="image url" name='image' className="input input-bordered pt-2 pl-2" required />
+                                                    </div>
+                                                </div>
+                                                <div className='ml-3'>
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Email</span>
+                                                        </label>
+                                                        <input type="email" placeholder="email" name='email' className="input input-bordered" required />
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Password</span>
+                                                        </label>
+                                                        <div className='relative'>
+                                                            <input onBlur={passBlur1} type={showPass2 ? 'text' : 'password'} placeholder="password" name='password' className={border1 ? "input input-bordered w-full border-gray-300" : "input input-bordered w-full border-red-700"} required />
+                                                            <div className='absolute top-3 right-3'>
+                                                                {
+                                                                    showPass2 ? <i onClick={() => setShowPass2(!showPass2)} className="fa-regular fa-eye cursor-pointer"></i> : <i onClick={() => setShowPass2(!showPass2)} className="fa-regular fa-eye-slash cursor-pointer"></i>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Confirm Password</span>
+                                                        </label>
+                                                        <div className='relative'>
+                                                            <input type={showPass3 ? 'text' : 'password'} placeholder="confirm password" name='confirmPassword' className={border2 ? "input input-bordered w-full border-gray-300" : "input input-bordered w-full border-red-700"} required />
+                                                            <div className='absolute top-3 right-3'>
+                                                                {
+                                                                    showPass3 ? <i onClick={() => setShowPass3(!showPass3)} className="fa-regular fa-eye cursor-pointer"></i> : <i onClick={() => setShowPass3(!showPass3)} className="fa-regular fa-eye-slash cursor-pointer"></i>
+                                                                }
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Confirm Password</span>
-                                                </label>
-                                                <div className='relative'>
-                                                    <input type={showPass3 ? 'text' : 'password'} placeholder="confirm password" name='confirmPassword' className={border2 ? "input input-bordered w-full border-gray-300" : "input input-bordered w-full border-red-700"} required />
-                                                    <div className='absolute top-3 right-3'>
-                                                        {
-                                                            showPass3 ? <i onClick={() => setShowPass3(!showPass3)} className="fa-regular fa-eye cursor-pointer"></i> : <i onClick={() => setShowPass3(!showPass3)} className="fa-regular fa-eye-slash cursor-pointer"></i>
-                                                        }
-                                                    </div>
-                                                </div>
+                                            <div className="form-control mt-6 modal-action">
+                                                <button className="btn w-3/5 mx-auto">Sign Up</button>
+                                            </div>
+                                        </form>
+                                        <div className='mt-5 flex flex-col items-center'>
+                                            <h1>You can also sign up with this</h1>
+                                            <div className='mt-2'>
+                                                <button onClick={handleGoogleSignIn} className='btn bg-transparent text-black border-0 hover:bg-transparent'><i className="fa-brands fa-google text-3xl"></i></button>
+                                                <button onClick={handleFacebookSignIn} className='btn bg-transparent text-black border-0 hover:bg-transparent'><i className="fa-brands fa-facebook text-3xl"></i></button>
+                                                <button onClick={handleGithubSignIn} className='btn bg-transparent text-black border-0 hover:bg-transparent'><i className="fa-brands fa-github text-3xl"></i></button>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="form-control mt-6">
-                                        <button className="btn w-3/5 mx-auto">Sign Up</button>
-                                    </div>
-                                </form>
-                                <div className='mt-5 flex flex-col items-center'>
-                                    <h1>You can also sign up with this</h1>
-                                    <div className='mt-2'>
-                                        <button onClick={handleGoogleSignIn} className='btn bg-transparent text-black border-0 hover:bg-transparent'><i className="fa-brands fa-google text-3xl"></i></button>
-                                        <button onClick={handleFacebookSignIn} className='btn bg-transparent text-black border-0 hover:bg-transparent'><i className="fa-brands fa-facebook text-3xl"></i></button>
-                                        <button onClick={handleGithubSignIn} className='btn bg-transparent text-black border-0 hover:bg-transparent'><i className="fa-brands fa-github text-3xl"></i></button>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                            :
+                            <div className='flex flex-col items-center mt-5'>
+                                <p className='text-center mx-5'>We just sent a verification mail to you. Please check your email and verify your email address.</p>
+                                <label htmlFor="my-modal-3" className='btn btn-wide mt-5 mb-2'>Okay</label>
+                            </div>
+                    }
                 </div>
             </div>
 
@@ -269,7 +305,10 @@ const Join = () => {
                     <label htmlFor="my-modal-4" className="btn btn-sm btn-circle absolute right-2 top-2">✕</label>
                     {
                         clicked ?
-                            <p className='text-center mx-5 my-5'>We just send a password recovery mail to you. Check your email and click the link in it. And then set a new password</p>
+                            <div className='flex flex-col items-center'>
+                                <p className='text-center mx-5 my-5'>We just send a password recovery mail to you. Check your email and click the link in it. And then set a new password</p>
+                                <button onClick={() => setClicked(false)} className='btn'>Send again</button>
+                            </div>
                             :
                             <form onSubmit={recoverPassword} className='flex flex-col mt-5 mb-3'>
                                 <p className='text-center mx-5 mb-5'>If you forgot your password and want to recover it then put your eamil here and click the submit button</p>

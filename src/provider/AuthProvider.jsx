@@ -13,12 +13,15 @@ const AuthProvider = ({ children }) => {
     const [user, setUser] = useState()
     const [loading, setLoading] = useState(true)
     const joinByGoogle = () => {
+        setLoading(true)
         return signInWithPopup(auth, google)
     }
     const joinByFacebook = () => {
+        setLoading(true)
         return signInWithPopup(auth, facebook)
     }
     const joinByGithub = () => {
+        setLoading(true)
         return signInWithPopup(auth, github)
     }
     const createUser = (email, password) => {
@@ -41,8 +44,14 @@ const AuthProvider = ({ children }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, currentUser => {
             console.log('auth state change', currentUser);
+            // if (currentUser.emailVerified) {
             setUser(currentUser)
             setLoading(false)
+            // }
+            // else {
+            //     setUser(null)
+            //     setLoading(false)
+            // }
         })
         return () => {
             unsubscribe()
@@ -60,6 +69,7 @@ const AuthProvider = ({ children }) => {
         joinByFacebook,
         joinByGithub,
         resetPassword,
+        setLoading,
         loading
     }
 

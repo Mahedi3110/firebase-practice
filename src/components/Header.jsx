@@ -41,7 +41,7 @@ const Header = () => {
                             </li>
                             <li>
                                 {loading ? <p className='mx-5'>Loading...</p> :
-                                    user ? <div className='flex items-center'>
+                                    user?.emailVerified ? <div className='flex items-center'>
                                         <NavLink className={({ isActive }) => isActive ? 'text-blue-700 mx-5' : 'mx-5 hover:text-blue-500'} to="/profile">Profile</NavLink>
                                         <i onClick={handleLogOut} className="fa-solid fa-right-from-bracket text-3xl cursor-pointer"></i>
                                     </div> :
